@@ -13,7 +13,7 @@ thread2 = threading.Thread(target=process2.run)
 
 # Start the threads
 thread1.start()
-time.sleep(1)
+time.sleep(5)
 thread2.start()
 
 # Wait for both threads to complete
