@@ -1,4 +1,6 @@
+import time
 from pymongo import MongoClient
+import requests
 
 # Class with run method for stocks processing
 class stocksprocessor:
@@ -7,7 +9,8 @@ class stocksprocessor:
 
     self.apiKey = None
     self.symbol = None
-    self.open = None
+    self.openPriceInitialized = False
+    self.openPrice = None
 
   def run(self):
 
@@ -16,6 +19,9 @@ class stocksprocessor:
 
     # Retrieve Symbol Method
     self.retrieveStockSymbol()
+
+    # Process the Stock
+    self.processStock()
 
 
 
@@ -37,8 +43,6 @@ class stocksprocessor:
     # Update the Database
     collection.update_one({"key": self.apiKey},{"$set": {"available": False}})
 
-    print("API Key used:", self.apiKey)
-
 
 
   def retrieveStockSymbol(self):
@@ -59,7 +63,46 @@ class stocksprocessor:
     # Update the Database
     collection.update_one({"symbol": self.symbol},{"$set": {"available": False}})
 
-    print("Symbol used:", self.symbol)
+
+
+  def processStock(self):
+
+    url = f"https://finnhub.io/api/v1/quote?symbol={self.symbol}&token={self.apiKey}"
+
+    for i in range(60):
+      response = requests.get(url)
+
+      if response.status_code == 200:
+            
+            data = response.json()
+
+            if self.openPriceInitialized == False:
+               
+              # Open price of the day
+              self.openPrice = data.get("o")    
+              self.openPriceInitialized = True
+
+            # Live price
+            livePrice = data.get("c")  
+
+            # Calculate change percentage
+            percentChange = ((livePrice-self.openPrice)/self.openPrice)*100
+
+            if percentChange > 15 or percentChange < -5:
+
+               # Change Symbol   
+              self.changeSymbol()
+              self.openPriceInitialized = False
+
+      else:
+            print("Server Error Occurred")
+
+      # Wait for 1 second
+      time.sleep(1)  
+
+
+  def changeSymbol(self):
+     self.retrieveStockSymbol
 
 
 
